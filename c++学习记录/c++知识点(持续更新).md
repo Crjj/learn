@@ -4,7 +4,7 @@
 
 - 可执行与可链接格式 (Executable and Linkable Format) 是一种用于可执行文件、目标代码、共享库和核心转储 （core dump） 的标准文件格式，操作系统在加载 ELF 文件时会将按照标准依次读取每个段中的内容，并将其加载到内存中，同时为该进程分配栈空间，并将 pc 寄存器指向代码段的起始位置，然后启动进程。
 
-#### 2. 内存分区
+#### 2. 内存分区（用户空间）
 
 - 栈：主要存放函数的局部变量、函数参数、返回地址等，由操作系统自动申请释放，如果进程结束后还没有释放，操作系统会自动回收
 - 堆：动态申请的内存空间，由malloc或者new函数申请，free或者delete进行释放，如果进程结束后还没有释放，操作系统会自动回收
@@ -198,9 +198,112 @@ int main()
 
 
 
+## 五种构造函数
+
+#### 1. 无参构造函数（默认）
+
+```c++
+class Person {
+  public:
+  string name;
+  int age;
+ 
+  Person() { // 拷贝构造函数
+    name = "";
+    age = 18;
+  }  
+}
+```
+
+#### 2. 一般构造函数(带参)
+
+```c++
+class Person {
+  public:
+  string name;
+  int age;
+ 
+  Person(const string &name, int age) { // 拷贝构造函数
+    this.name = name;
+    this.age = age;
+  }  
+}
+```
+
+#### 3. 拷贝（复制）构造函数
+
+```c++
+class Person {
+public:
+  string name;
+  int age;
+ 
+  Person(const Person& other) { // 拷贝构造函数
+    name = other.name;
+    age = other.age;
+  }
+};
+```
+
+#### 4. 移动构造函数
+
+```c++
+class Person {
+public:
+  string name;
+  int age;
+ 
+  Person(Person&& other) { // 拷贝构造函数
+    name = std::move(other.name);
+    age = other.age;
+  }
+};
+/*
+Person p1("Bob", 25); // 创建 Person 对象
+Person p2(std::move(p1)); // 移动构造函数创建 p2   此时p1.name已经转移到p2，p1,age正常
+*/
+```
+
+#### 5.类型转换构造函数
+
+```c++
+//需要注意的一点是，这个其实就是一般的构造函数，但是对于出现这种单参数的构造函数，C++会默认将参数对应的类型转换为该类类型，有时候这种隐私的转换是我们所不想要的，所以需要使用explicit来限制这种转换。
+// 例如：下面将根据一个double类型的对象创建了一个Complex对象
+Complex(double r)
+{
+    m_real = r;
+    m_imag = 0.0;
+}
+// 调用  Complex c2= 5.2;  
+```
+
+
+
+## 强制类型转换
+
+#### 1. static_cast：用于各种隐式转换
+
+#### 2.  const_cast：用来移除变量的const或volatile限定符
+
+> volatile表示变量可以被编译器未知的因素所更改，遇到volatile编译器不再进行优化，从而提供对特殊地址的稳定访问
+
+#### 3. reinterpret_cast：允许将任何指针转换为任何其它指针类型，没有动态类型检查，不安全
+
+#### 4. dynamic_cast：安全的向下（父类到子类）进行类型转换，只能用于含有虚函数的类，只能转指针或引用
+
+
+
+## 虚函数表与虚指针
+
+
+
+
+
 ## C++特性
 
 > https://blog.csdn.net/qq_39071254/article/details/140082686
+>
+> https://blog.csdn.net/qq_41854911/article/details/119657617
 
 ### C++11
 
@@ -229,9 +332,42 @@ std::cout << add(1, 2);
 
 #### 4. 智能指针
 
-- `std::shared_ptr`
-- `std::unique_ptr`
-- `std::weak_ptr`
+- `std::shared_ptr`：只有共享的最后一个引用释放资源销毁
+
+  > 原理：利用一个计数器，当发生使用赋值拷贝构造函数或运算符重载，作为函数返回值，或者作为一个参数传递给另外一个参数，计数+1，当shared_ptr赋新值或者销毁，计数-1.直到计数为0，调用析构函数释放对象
+  >
+  > std::shared_ptr<T> p = std::make_shared<T>(..); // 初始化方式1
+  >
+  > std::shared_ptr<T> p(new T(...)); 初始化方式2
+
+- `std::unique_ptr`：独占式的指针，离开 unique_ptr 对象的作用域时，会自动释放资源
+
+  > 原理：由于指针或引用在离开作用域是不会调用析构函数的，但对象在离开作用域会调用析构函数。unique_ptr本质是一个类，将**复制构造函数**和**赋值构造函数**声明为delete就可以实现独占式，只允许移动构造和移动赋值。
+
+- `std::weak_ptr`：shared_ptr一起使用，也叫弱指针，作为资源的观察者，不影响对象的引用计数
+
+  > 当使用std::shared_ptr会引起循环引用时，则可采用弱指针std::weak_ptr解决
+  >
+  > weak_ptr是为了配合shared_ptr而引入的一种智能指针，它指向一个由shared_ptr管理的对象而不影响所指对象的生命周期，将一个weak_ptr绑定到一个shared_ptr不会改变shared_ptr的引用计数。不论是否有weak_ptr指向，一旦最后一个指向对象的shared_ptr被销毁，对象就会被释放。从这个角度看，weak_ptr更像是shared_ptr的一个助手而不是智能指针
+  >
+
+- auto_ptr：已弃用，由unique_ptr代替，std::unique_ptr不仅加入了移动语义的支持，同时也关闭了左值拷贝构造和左值赋值功能
+
+  >auto_ptr支持**operator=**和**拷贝构造**，这使得有些场景下为了确保指针所有者唯一，会转移所有权
+  >
+  >```cpp
+  >void do_somthing(std::auto_ptr<People> people){
+  >    // 该函数内不对people变量执行各种隐式/显示的所有权转移和释放
+  >    ...
+  >}
+  >
+  >std::auto_ptr<People> people(new People("jony"));
+  >do_something(people);
+  >...
+  >
+  >std::cout << people->get_name() << std::endl; 
+  >// 此时的people为空
+  >```
 
 #### 5. 右值引用：优化对象的移动操作，`&&`表示右值引用
 
@@ -254,7 +390,7 @@ foo(10);  // 10 是右值
    // std::move() 将左值转换为右值引用，这使得你能够调用特定的移动构造函数或移动赋值操作符，从而避免拷贝
    ```
 
-- `std::forward` - 完美转发，指在模板中保持参数的左值或右值属性
+- `std::forward` - 完美转发，指在模板中保持参数的左值或右值属性，
 
   ```cpp
   引用折叠：
@@ -290,6 +426,44 @@ foo(10);  // 10 是右值
 #### 7. `nullptr` ：用于表示空指针，替代`NULL`
 
 #### 8. `constexpr`常量表达：用于定义常量表达式函数
+
+> ```
+> #include <iostream>
+> #include <array>
+> using namespace std;
+> 
+> void dis_1(const int x){
+>     //错误，x是只读的变量  ------ 此处的x还是变量
+>     array <int,x> myarr{1,2,3,4,5};
+>     cout << myarr[1] << endl;
+> }
+> 
+> void dis_2(){
+>     const int x = 5; // ---- 常量
+>     array <int,x> myarr{1,2,3,4,5};
+>     cout << myarr[1] << endl;
+> }
+> 
+> int main()
+> {
+>    dis_1(5);
+>    dis_2();
+> }
+> ```
+>
+> 为了解决 const 关键字的双重语义问题，保留了 const 表示“只读”的语义，而将“常量”的语义划分给了新添加的 constexpr 关键字
+>
+> ```c++
+> // const 只读，不意味着不能修改，如下
+> int main()
+> {
+>     int a = 10;
+>     const int & con_b = a;
+>     cout << con_b << endl;  // 输出10
+>     a = 20;
+>     cout << con_b << endl;	// 输出20，通过修改a达到修改b的作用
+> }
+> ```
 
 #### 9. 线程支持
 
@@ -432,3 +606,19 @@ int million = 1'000'000; // 方便读写
 #### 7. 图
 
 #### 8. 集合
+
+
+
+## STL
+
+#### 1. 容器
+
+#### 2. 算法
+
+#### 3. 函数对象
+
+#### 4. 迭代器
+
+#### 5. 适配器
+
+#### 6.  内存分配器
