@@ -1,4 +1,4 @@
-## 内存管理
+## +++内存管理
 
 #### 1. ELF文件
 
@@ -213,11 +213,22 @@ int main()
 #### 2. 结构型模式
 
 - 适配器模式
+
 - 桥接模式
+
 - 组合模式
+
 - 装饰模式
+
+  ```c++
+  ```
+
+  
+
 - 外观模式
+
 - 享元模式
+
 - 代理模式
 
 #### 3. 行为模式
@@ -329,7 +340,21 @@ Complex(double r)
 // 调用  Complex c2= 5.2;  
 ```
 
+#### 常见考核
 
+[在C++中，为了让某个类只能通过new来创建实例（即如果直接创建对象，编译器将报错），怎样做？_c++如何让某个类只能通过new来创建。-CSDN博客](https://blog.csdn.net/tkp2014/article/details/48846715)
+
+- ##### 让某个类只能通过new来创建实例（堆上创建）
+
+  将析构函数定义为**protected**(因为private时子类无法继承)，编译器在创建类时会检查所有
+
+- #### 让某个类只能在栈上创建实例
+
+  将operator new() 设为私有的
+
+- #### 为什么模板的声明和实现不能分写在.h与.cpp中
+
+  模板类在编译器进行替换，当实例化一个模板时，编译器必须看到模板确切的定义而不仅仅是它的声明，或者使用export关键字
 
 ## 强制类型转换
 
@@ -345,17 +370,69 @@ Complex(double r)
 
 
 
-## 虚基类表与虚基类指针、虚函数表与虚函数指针
+## 虚指针(vptr)与虚函数表(vtbl)
 
-#### 1. 虚基类表与虚基类指针：
+[https://www.cnblogs.com/ZY-Dream/p/10016731.html]()
+
+#### 1. 虚指针：任何含有虚函数的类中，不论这个虚函数是继承的还是定义的，都有一个函数指针指向一个虚函数表，虚函数表是一个数组，数组中的每个元素都是一个虚函数指针。
+
+```c++
+class A
+{
+private:
+    int data1;
+    int data2;
+public:
+    A(){};
+   virtual ~A(){};
+};
+
+class B :public A
+{
+
+};
+int main()
+{
+    A a;
+    B b;
+    cout<<sizeof(a)<<endl; //16
+    cout<<sizeof(b)<<endl; //16
+    return 0;
+}
+B继承了A，虽然没有显式声明，其依然继承了A的所有的元素, 包含两个int类型的成员变量和一个虚指针，因此内存大小是16
+
+类的大小与它的构造函数、析构函数和其他成员函数无关，只已它的数据成员有关,类的大小也遵守类似class字节对齐的补齐规则。
+C++编译器强制给空类插入一个缺省成员，长度为1。如果有自定义的变量，变量将取代这个缺省成员。
+静态数据成员和成员函数不占空间
+
+class A
+{
+    void FuncA();
+}
+// sizeof(A) = 1
+```
+
+#### 2. 虚函数表: 虚指针指向的就是虚函数表，本质是一个数组，存着所有的虚函数指针。
+
+**同一个类的不同实例共用同一份虚函数表，他们都通过一个虚函数表指针指向该虚函数表**
+
+#### 3. 虚继承：当存在虚拟继承时，派生类中会有一个指向虚基类表的指针
+
+```c++
+class C : virtual public A, virtual public B
+{
+  int c;
+};
+
+```
 
 
 
 ## C++特性
 
-> https://blog.csdn.net/qq_39071254/article/details/140082686
->
-> https://blog.csdn.net/qq_41854911/article/details/119657617
+https://blog.csdn.net/qq_39071254/article/details/140082686
+
+https://blog.csdn.net/qq_41854911/article/details/119657617
 
 ### C++11
 
@@ -529,6 +606,25 @@ foo(10);  // 10 是右值
 
 #### 14. 模板别名`using`关键字用于定义模板别名
 
+```c++
+typedef无法重定义一个模板，如 
+
+// C++98/03
+template <typename Val>
+struct str_map
+{
+    typedef std::map<std::string, Val> type;
+};
+
+str_map<int>::type map1;
+
+// c++11后    
+template <typename Val>
+using str_map_t = std::map<std::string, Val>;
+
+str_map_t<int> map1;
+```
+
 #### 15. 变长模板，支持模板参数包
 
 ###  
@@ -598,7 +694,7 @@ int million = 1'000'000; // 方便读写
 
 ## 线程同步
 
-#### 1. 互斥量：用于保护临界区，二进制信号量，只熊取0或1两个值
+#### 1. 互斥量：用于保护临界区，二进制信号量，只能取0或1两个值
    - std::mutex: 通过lock与unlock获取和释放锁
 
 #### 2.  条件变量：用于线程间的同步，需要与互斥量配合使用
@@ -664,23 +760,76 @@ int million = 1'000'000; // 方便读写
 - 快排：分而治之，快速排序的主要思想是分治法，将一个大问题分割成小问题，解决小问题后再合并它们的结果。
 
   1. 从待排序的数组中选择一个元素，称之为枢纽元（pivot）。
-
   2. 将数组中小于枢纽元的元素移到枢纽元的左边，将大于枢纽元的元素移到枢纽元的右边，这个过程称为分区（partition）。
-
   3. 递归地对枢纽元左边的子数组和右边的子数组进行排序。
-
   4. 当所有子数组都有序时，整个数组就自然有序了
 
+- 实现链表逆序，三个(一个临时指针)指针遍历链表，逐个反转指针方向
+
+  ```C++
+  ListNode* reverseList(ListNode* head)
+  {
+      ListNode* prev = nullptr;
+      ListNode* curr = head;
+      while (curr != nullptr)
+      {
+          ListNode* nextTemp = curr->next;
+          curr->next = prev;
+          prev = curr;
+          curr = nextTemp;
+      }
+      return prev;
+  }
+  ```
+
+- 判断一个链表是否有环
+
+  使用快慢指针（Tortoise and Hare算法）。快指针一次移动两步，慢指针一次一步，如果链表有环，两个指针最终会相遇
+
+- 如何设计一个线程安全的单例模式，C++11之后的`std::call_once`或静态局部变量
+
+  ```c++
+  class Singleton
+  {
+  public:
+      static Singleton& getInstance()
+      {
+          static Singleton instance;
+          return instance;
+      }
+  private:
+      Singleton() {}
+      Singleton(const Singleton&) = delete;
+      Singleton& operator=(const Singleton&) = delete;
+  };
+  ```
+
+  
+
 ## STL
+
+[https://zhuanlan.zhihu.com/p/614287445]()
 
 #### 1. 容器
 
 #### 2. 算法
 
-#### 3. 函数对象
+#### 3. 迭代器
 
-#### 4. 迭代器
+#### 4. 仿函数
 
-#### 5. 适配器
+#### 4. 适配器
 
-#### 6.  内存分配器
+#### 5. 分配器
+
+
+
+### UML
+
+[UML一一 类图关系 (泛化、实现、依赖、关联、聚合、组合)_uml类图关系-CSDN博客](https://blog.csdn.net/m0_37989980/article/details/104470064)
+
+
+
+## 面试
+
+[C++/QT PC客户端面试题 | Skykey's Home](https://blog.skykey.fun/2022/06/20/C++面试/)
